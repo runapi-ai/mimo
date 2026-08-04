@@ -1,0 +1,10 @@
+{
+  "name": "mimo",
+  "version": "0.1.1",
+  "description": "RunAPI MiMo API skill for Claude Code, Codex, Gemini CLI, Cursor, and 50+ agents",
+  "skills": [
+    {
+      "path": "skills/mimo/SKILL.md"
+    }
+  ]
+}
