@@ -1,6 +1,6 @@
 ---
 name: mimo
-description: Call the MiMo API (mimo-v2.5-pro and mimo-v2.5) through RunAPI using OpenAI-compatible Chat Completions or Responses clients, or Anthropic-compatible Messages clients. Use when the user asks for MiMo text generation, streaming, or wants to point an existing LLM client at RunAPI.
+description: Call the MiMo API (mimo-v2.5-pro and mimo-v2.5) through RunAPI using OpenAI-compatible Chat Completions or Responses clients, or Anthropic-compatible Messages clients. Use when the user asks for MiMo text generation, supported image understanding, streaming, or wants to point an existing LLM client at RunAPI.
 documentation: https://runapi.ai/models/mimo.md
 provider_page: https://runapi.ai/providers/xiaomi.md
 catalog: https://runapi.ai/models.md
@@ -30,8 +30,9 @@ metadata:
 # MiMo on RunAPI
 
 MiMo on RunAPI supports basic text requests through OpenAI-compatible Chat
-Completions and Responses, plus Anthropic-compatible Messages. Use the OpenAI
-SDK for new integrations.
+Completions and Responses, plus Anthropic-compatible Messages. `mimo-v2.5`
+also supports synchronous Chat Completions with HTTP(S) image URLs. Use the
+OpenAI SDK for new integrations.
 
 ## Setup
 
@@ -71,6 +72,31 @@ const response = await client.chat.completions.create({
   model: "mimo-v2.5",
   messages: [{ role: "user", content: "Draft a concise release note." }],
 });
+```
+
+### Image input
+
+Use `mimo-v2.5` with a synchronous Chat Completions request. Image parts accept
+an HTTP(S) URL and may be combined with text parts.
+
+```python
+response = client.chat.completions.create(
+    model="mimo-v2.5",
+    messages=[{
+        "role": "user",
+        "content": [
+            {"type": "text", "text": "Describe this image."},
+            {
+                "type": "image_url",
+                "image_url": {
+                    "url": "https://cdn.runapi.ai/public/samples/image.jpg"
+                },
+            },
+        ],
+    }],
+    stream=False,
+)
+print(response.choices[0].message.content)
 ```
 
 ## Responses
@@ -117,12 +143,15 @@ print(message.content[0].text)
 
 ## Supported subset
 
-- Send text-only messages, instructions, or system prompts.
-- Sync and SSE requests are supported on Chat Completions, Responses, and
-  Messages.
+- Basic text supports sync and SSE on Chat Completions, Responses, and Messages.
+- `mimo-v2.5` additionally accepts `text` and HTTP(S) `image_url` content parts
+  on synchronous Chat Completions requests.
 - Tools, reasoning controls, continuation state, hosted capabilities,
-  documents, audio, images, and other multimodal inputs are not in the verified
+  documents, audio, video, data URL images, streaming image requests, and image
+  input on `mimo-v2.5-pro`, Responses, or Messages are outside the verified
   subset and are rejected before usage is reserved.
+- Image parts accept only `type` and `image_url.url`; omit extensions such as
+  `detail` and `cache_control`.
 - Keep the requested model ID unchanged. The response uses the same canonical
   identity.
 
@@ -144,5 +173,7 @@ print(message.content[0].text)
 - Keep API keys in environment variables or a secret manager.
 - Prefer the OpenAI-compatible client at `https://runapi.ai/v1` for new code.
 - Use streaming for long responses.
+- Keep image requests within the exact synchronous `mimo-v2.5` Chat Completions subset.
+- Omit `detail`, `cache_control`, and other unverified image fields.
 - Do not add advanced or multimodal fields that are outside the supported subset.
 - Link to <https://runapi.ai/models/mimo.md> for pricing instead of copying values.

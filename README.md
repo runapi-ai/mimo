@@ -5,7 +5,7 @@
 </p>
 
 <p align="center">
-  Configure OpenAI-compatible or Anthropic-compatible clients to use MiMo text models on RunAPI.
+  Configure OpenAI-compatible or Anthropic-compatible clients to use MiMo models on RunAPI.
 </p>
 
 <p align="center">
@@ -81,6 +81,30 @@ console.log(response.output_text);
 
 Get a RunAPI API Key at <https://runapi.ai/api_keys>.
 
+## Understand an image
+
+`mimo-v2.5` accepts HTTP(S) image URLs in synchronous Chat Completions requests:
+
+```python
+response = client.chat.completions.create(
+    model="mimo-v2.5",
+    messages=[{
+        "role": "user",
+        "content": [
+            {"type": "text", "text": "Describe this image."},
+            {
+                "type": "image_url",
+                "image_url": {
+                    "url": "https://cdn.runapi.ai/public/samples/image.jpg"
+                },
+            },
+        ],
+    }],
+    stream=False,
+)
+print(response.choices[0].message.content)
+```
+
 ## Supported MiMo models
 
 | Model ID | Notes |
@@ -91,8 +115,13 @@ Get a RunAPI API Key at <https://runapi.ai/api_keys>.
 ## Protocol boundary
 
 - Basic text supports sync and SSE on Chat Completions, Responses, and Messages.
-- Tools, reasoning controls, continuation state, documents, images, audio, and
-  other multimodal input are rejected before usage is reserved.
+- `mimo-v2.5` supports `text` and HTTP(S) `image_url` parts on synchronous Chat
+  Completions requests.
+- Tools, reasoning controls, continuation state, documents, audio, video, data
+  URL images, streaming image requests, and image input on `mimo-v2.5-pro`,
+  Responses, or Messages are rejected before usage is reserved.
+- Image parts accept only `type` and `image_url.url`; omit `detail`,
+  `cache_control`, and other image extensions.
 - Responses preserve the requested canonical model ID.
 
 ## Links
