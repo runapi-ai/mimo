@@ -1,5 +1,11 @@
 # Changelog
 
+## [v0.1.3](https://github.com/runapi-ai/mimo/releases/tag/v0.1.3) - 2026-08-10
+
+### Changed
+- Complete marketplace distribution for the RunAPI MiMo skill.
+
+
 ## [v0.1.2](https://github.com/runapi-ai/mimo/releases/tag/v0.1.2) - 2026-08-06
 
 ### Added
