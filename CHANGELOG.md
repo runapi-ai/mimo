@@ -1,5 +1,11 @@
 # Changelog
 
+## [v0.1.4](https://github.com/runapi-ai/mimo/releases/tag/v0.1.4) - 2026-08-12
+
+### Changed
+- Start MiMo requests from a positive verified allowlist with explicit result verification, stop boundaries, and conditionally loaded compatibility protocols.
+
+
 ## [v0.1.3](https://github.com/runapi-ai/mimo/releases/tag/v0.1.3) - 2026-08-10
 
 ### Changed

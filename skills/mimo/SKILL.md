@@ -1,6 +1,6 @@
 ---
 name: mimo
-description: Call the MiMo API (mimo-v2.5-pro and mimo-v2.5) through RunAPI using OpenAI-compatible Chat Completions or Responses clients, or Anthropic-compatible Messages clients. Use when the user asks for MiMo text generation, supported image understanding, streaming, or wants to point an existing LLM client at RunAPI.
+description: Call the MiMo API (mimo-v2.5-pro and mimo-v2.5) through RunAPI using OpenAI-compatible Chat Completions. Use for MiMo text generation, the verified MiMo image subset, streaming, or an existing compatibility client that needs the conditional reference.
 documentation: https://runapi.ai/models/mimo.md
 provider_page: https://runapi.ai/providers/xiaomi.md
 catalog: https://runapi.ai/models.md
@@ -19,161 +19,89 @@ metadata:
     - name: OPENAI_BASE_URL
       required: true
       description: Set to https://runapi.ai/v1 for MiMo on RunAPI.
-    - name: ANTHROPIC_API_KEY
-      required: false
-      description: Optional RunAPI API key alias for Anthropic-compatible Messages.
-    - name: ANTHROPIC_BASE_URL
-      required: false
-      description: Optional base URL for Anthropic-compatible MiMo requests.
 ---
 
 # MiMo on RunAPI
 
-MiMo on RunAPI supports basic text requests through OpenAI-compatible Chat
-Completions and Responses, plus Anthropic-compatible Messages. `mimo-v2.5`
-also supports synchronous Chat Completions with HTTP(S) image URLs. Use the
-OpenAI SDK for new integrations.
+Use OpenAI-compatible Chat Completions at `https://runapi.ai/v1` as the primary
+protocol. Keep the exact public model identity throughout the request.
 
-## Setup
+## Primary protocol recipe
 
-```dotenv
-OPENAI_API_KEY=YOUR_RUNAPI_TOKEN
-OPENAI_BASE_URL=https://runapi.ai/v1
-```
+### Authenticate
 
-Get a RunAPI API Key at <https://runapi.ai/api_keys>.
+Set `OPENAI_API_KEY` to a RunAPI API key and `OPENAI_BASE_URL` to
+`https://runapi.ai/v1`. Keep the key in the environment or a secret manager.
 
-## Chat Completions
+### Send request
 
 ```python
 from openai import OpenAI
 
-client = OpenAI(
-    api_key="YOUR_RUNAPI_TOKEN",
-    base_url="https://runapi.ai/v1",
-)
-
+client = OpenAI(api_key="YOUR_RUNAPI_TOKEN", base_url="https://runapi.ai/v1")
 response = client.chat.completions.create(
     model="mimo-v2.5-pro",
-    messages=[{"role": "user", "content": "Summarize this design decision."}],
+    messages=[{"role": "user", "content": "Summarize this decision."}],
 )
 print(response.choices[0].message.content)
 ```
 
-```typescript
-import OpenAI from "openai";
-
-const client = new OpenAI({
-  apiKey: "YOUR_RUNAPI_TOKEN",
-  baseURL: "https://runapi.ai/v1",
-});
-
-const response = await client.chat.completions.create({
-  model: "mimo-v2.5",
-  messages: [{ role: "user", content: "Draft a concise release note." }],
-});
-```
-
-### Image input
-
-Use `mimo-v2.5` with a synchronous Chat Completions request. Image parts accept
-an HTTP(S) URL and may be combined with text parts.
-
-```python
-response = client.chat.completions.create(
-    model="mimo-v2.5",
-    messages=[{
-        "role": "user",
-        "content": [
-            {"type": "text", "text": "Describe this image."},
-            {
-                "type": "image_url",
-                "image_url": {
-                    "url": "https://cdn.runapi.ai/public/samples/image.jpg"
-                },
-            },
-        ],
-    }],
-    stream=False,
-)
-print(response.choices[0].message.content)
-```
-
-## Responses
-
-```python
-response = client.responses.create(
-    model="mimo-v2.5-pro",
-    input="Explain this incident in three bullets.",
-)
-print(response.output_text)
-```
-
-## Streaming
+For longer output, request terminal usage while streaming:
 
 ```python
 stream = client.chat.completions.create(
     model="mimo-v2.5",
-    messages=[{"role": "user", "content": "Write a short status update."}],
+    messages=[{"role": "user", "content": "Write a status update."}],
     stream=True,
     stream_options={"include_usage": True},
 )
 for chunk in stream:
     if chunk.choices and chunk.choices[0].delta.content:
         print(chunk.choices[0].delta.content, end="", flush=True)
+    if chunk.usage:
+        print(chunk.usage)
 ```
 
-## Anthropic Messages
+### Verify result
 
-```python
-import anthropic
+For a synchronous call, require one response choice with a final assistant
+message and read `usage` from that response. For SSE, consume through `[DONE]`
+and require the terminal usage chunk requested by `include_usage`. An HTTP 2xx
+without the expected final content and Usage is incomplete.
 
-client = anthropic.Anthropic(
-    api_key="YOUR_RUNAPI_TOKEN",
-    base_url="https://runapi.ai",
-)
+### Stop boundaries
 
-message = client.messages.create(
-    model="mimo-v2.5-pro",
-    max_tokens=1024,
-    messages=[{"role": "user", "content": "Draft a migration checklist."}],
-)
-print(message.content[0].text)
-```
+Correct a rejected request shape at most once, using the structured error and
+this verified allowlist. Retry a transport failure once only when no response
+or Usage was returned and replay is safe. On a terminal RunAPI failure, retain
+the request ID and error, then stop without changing model or protocol.
 
-## Supported subset
+## Positive verified request allowlist
 
-- Basic text supports sync and SSE on Chat Completions, Responses, and Messages.
-- `mimo-v2.5` additionally accepts `text` and HTTP(S) `image_url` content parts
-  on synchronous Chat Completions requests.
-- Tools, reasoning controls, continuation state, hosted capabilities,
-  documents, audio, video, data URL images, streaming image requests, and image
-  input on `mimo-v2.5-pro`, Responses, or Messages are outside the verified
-  subset and are rejected before usage is reserved.
-- Image parts accept only `type` and `image_url.url`; omit extensions such as
-  `detail` and `cache_control`.
-- Keep the requested model ID unchanged. The response uses the same canonical
-  identity.
+Start with only this verified request shape:
+
+- `mimo-v2.5-pro`: a text-only `messages` history with system, user, and
+  assistant roles.
+- `mimo-v2.5`: the same text shape, plus synchronous Chat Completions content
+  parts containing `text` and public HTTP(S) `image_url.url` values.
+- Both models: synchronous calls or SSE with `stream_options.include_usage`.
+
+Add an optional control only when the current RunAPI contract or a successful
+validation result explicitly verifies it for the selected model and mode.
+
+## Compatibility protocols
+
+Load [compatibility protocols](references/compatibility-protocols.md) only when an existing client requires Responses or Anthropic Messages. Keep the primary recipe in this file for new integrations.
 
 ## Supported models
 
 | Model ID | Use when |
 |---|---|
-| `mimo-v2.5-pro` | Higher-quality MiMo text generation |
-| `mimo-v2.5` | Efficient MiMo text generation |
+| `mimo-v2.5-pro` | Higher-quality verified text generation |
+| `mimo-v2.5` | Verified text and synchronous Chat image requests |
 
 ## References
 
 - Model overview and pricing: <https://runapi.ai/models/mimo.md>
 - Provider page: <https://runapi.ai/providers/xiaomi.md>
 - Catalog: <https://runapi.ai/models.md>
-
-## Agent rules
-
-- Keep API keys in environment variables or a secret manager.
-- Prefer the OpenAI-compatible client at `https://runapi.ai/v1` for new code.
-- Use streaming for long responses.
-- Keep image requests within the exact synchronous `mimo-v2.5` Chat Completions subset.
-- Omit `detail`, `cache_control`, and other unverified image fields.
-- Do not add advanced or multimodal fields that are outside the supported subset.
-- Link to <https://runapi.ai/models/mimo.md> for pricing instead of copying values.
