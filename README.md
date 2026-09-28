@@ -117,9 +117,15 @@ print(response.choices[0].message.content)
 - Basic text supports sync and SSE on Chat Completions, Responses, and Messages.
 - `mimo-v2.5` supports `text` and HTTP(S) `image_url` parts on synchronous Chat
   Completions requests.
-- Tools, reasoning controls, continuation state, documents, audio, video, data
-  URL images, streaming image requests, and image input on `mimo-v2.5-pro`,
-  Responses, or Messages are rejected before usage is reserved.
+- `mimo-v2.5` Chat Completions accepts an optional `metadata` object with string
+  values on synchronous and streaming requests. Response echo and stored-completion
+  lookup are not guaranteed.
+- `mimo-v2.5` supports custom function calling and tool-result continuation on
+  Chat Completions and native Anthropic Messages, with sync and SSE responses.
+  Messages also accepts Claude Code adaptive thinking and text cache controls.
+- Pro and Responses support basic text only. Hosted tools, structured JSON
+  output, documents, audio, video, data URL images, streaming image requests,
+  and image input on Pro, Responses, or Messages remain unsupported.
 - Image parts accept only `type` and `image_url.url`; omit `detail`,
   `cache_control`, and other image extensions.
 - Responses preserve the requested canonical model ID.

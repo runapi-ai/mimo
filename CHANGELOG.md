@@ -1,5 +1,11 @@
 # Changelog
 
+## [v0.1.5](https://github.com/runapi-ai/mimo/releases/tag/v0.1.5) - 2026-09-28
+
+### Fixed
+- Document metadata, custom function calling, tool-result continuation, and native Claude Code Messages support for mimo-v2.5.
+
+
 ## [v0.1.4](https://github.com/runapi-ai/mimo/releases/tag/v0.1.4) - 2026-08-12
 
 ### Changed

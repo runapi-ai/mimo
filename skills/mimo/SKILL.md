@@ -1,6 +1,6 @@
 ---
 name: mimo
-description: Call the MiMo API (mimo-v2.5-pro and mimo-v2.5) through RunAPI using OpenAI-compatible Chat Completions. Use for MiMo text generation, the verified MiMo image subset, streaming, or an existing compatibility client that needs the conditional reference.
+description: Call the MiMo API (mimo-v2.5-pro and mimo-v2.5) through RunAPI using OpenAI-compatible Chat Completions. Use for MiMo text generation, function calling, Claude Code, the verified MiMo image subset, streaming, or an existing compatibility client that needs the conditional reference.
 documentation: https://runapi.ai/models/mimo.md
 provider_page: https://runapi.ai/providers/xiaomi.md
 catalog: https://runapi.ai/models.md
@@ -85,6 +85,16 @@ Start with only this verified request shape:
 - `mimo-v2.5`: the same text shape, plus synchronous Chat Completions content
   parts containing `text` and public HTTP(S) `image_url.url` values.
 - Both models: synchronous calls or SSE with `stream_options.include_usage`.
+- `mimo-v2.5` Chat Completions: an optional `metadata` object with string values,
+  for example `{"user_id": "customer-123"}`, on synchronous or streaming requests.
+  Do not rely on metadata being echoed in the response or available for stored-completion lookup.
+- `mimo-v2.5` Chat Completions supports custom function `tools`, `tool_choice`
+  (`auto`, `none`, `required`, or a named function), and `parallel_tool_calls`.
+  Preserve assistant `tool_calls`, their IDs, and `reasoning_content` when supplied;
+  return each result as a `tool` message with the matching `tool_call_id`.
+  Continue until the model returns final text. Both sync and SSE are supported.
+- For Claude Code with `mimo-v2.5`, use native Anthropic Messages as described
+  in the compatibility reference. Tool calling is not enabled for Pro or Responses.
 
 Add an optional control only when the current RunAPI contract or a successful
 validation result explicitly verifies it for the selected model and mode.
@@ -98,7 +108,7 @@ Load [compatibility protocols](references/compatibility-protocols.md) only when 
 | Model ID | Use when |
 |---|---|
 | `mimo-v2.5-pro` | Higher-quality verified text generation |
-| `mimo-v2.5` | Verified text and synchronous Chat image requests |
+| `mimo-v2.5` | Text, custom tool calling, Claude Code, and synchronous Chat image requests |
 
 ## References
 
